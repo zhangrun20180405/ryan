@@ -23,8 +23,4 @@
    xxx中文
   \end{CJK}
 
-\begin{CJK}{UTF8}{song}  
-		中文输入
-	\end{CJK}
-
 \end{document}
