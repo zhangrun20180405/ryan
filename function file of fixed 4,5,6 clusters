@@ -1,0 +1,179 @@
+from sklearn.decomposition import PCA
+from sklearn.cluster import KMeans
+from mpl_toolkits.mplot3d import Axes3D
+import numpy as np
+import pandas as pd
+import scipy.stats as stats
+import random as random
+random.seed(0 )
+ # 固定随机数种子为0，使得试验后的
+import matplotlib.pyplot as plt
+from sklearn.preprocessing import StandardScaler
+
+
+
+def fun_create_data(Theta):
+    z_lower = np.array([10, 12, 16, 17, 20, 4, 6, 7.5, 8.5, 15, 4.5, 6, 7.5, 8, 10, 10.5, 15, 17, 18, 19, 20, 14, 16, 18, 20, 25])
+    z_upper = np.array([23, 21, 24, 25, 26, 6, 10.5, 11, 12, 17.5, 8, 9, 10, 11, 12, 12.5, 21, 22, 23, 26, 27, 20, 21, 24, 28, 31])
+    z_mean = np.array([15, 16, 20, 22, 23, 10, 8, 9, 10, 16, 6, 7, 9, 10, 10.5, 12, 18, 20, 21, 23, 25, 16, 18, 22, 24, 28])
+    sigma = 1
+    n_samples = 2000
+
+    norm_dist = []
+    z = np.empty([12, n_samples, len(z_mean)])
+    print(len(z))
+    #复现的时候可以调用的数据入口
+    recurrent_backup=[]
+
+   # 初始数据
+    for i in range(len(z_mean)):
+        dist = stats.truncnorm((z_lower[i] - z_mean[i]) / sigma, (z_upper[i] - z_mean[i]) / sigma, loc=z_mean[i], scale=sigma)
+        z[0, :, i] = dist.rvs(n_samples)
+        # 基于上一轮 z[n] 数据的均值和协方差矩阵创立的下一个 z[n+1]轮数据
+    for n in range(10):
+        Theta= Theta
+        randomnumber=random.random()*random.random()
+        norm_dist.append((np.mean(z[n], axis=0)+Theta*randomnumber, np.cov(z[n], rowvar=0)))
+        print("random number in this case stage z["+str(n)+"],is"+ str(randomnumber) )
+        recurrent_backup.append(randomnumber)
+        z[n+1] = np.random.multivariate_normal(norm_dist[n][0], norm_dist[n][1],n_samples)
+        
+    for n in range(10):
+        z[11, (n * n_samples // 10):(n * n_samples // 10 + n_samples //10)] =  np.random.multivariate_normal(norm_dist[n][0], norm_dist[n][1],n_samples//10)
+
+    z_new=z[0]
+    for k in range(11):
+        z_new=np.vstack(( z_new,z[k+1]))
+    z_new.shape
+    return (z,z_new)
+    
+    
+def Pca_Kmeans_Fixed_k(data,fixed_clusters,n_principle_components):
+    # storage of kmenas result
+    data = StandardScaler().fit_transform(data)
+    pca=PCA(n_components=n_principle_components)
+    data_pca=pca.fit_transform(data)
+    k_means_array=[]
+    kmeans = KMeans(n_clusters=fixed_clusters, random_state=0).fit(data_pca)
+    k_means_array.append(kmeans)
+    labels = kmeans.labels_
+    labels=labels.reshape(1,len(labels))
+    data_pca_label=np.concatenate((labels.T,data_pca),axis=1)
+    return (data_pca_label)
+def plot_fuc_3d_6(plot_data,xlim=None,ylim=None,zlim=None):
+    plot_data=pd.DataFrame(plot_data,columns=["number of index cluster ","principle component 1"  ,"principle component 2","principle component 3"])
+    #print(plot_data)
+    plot_data["number of index cluster "]==float(1)
+    plot_data["number of index cluster "].astype('int')
+    #fig = plt.figure(1,figsize = (8,8))  # 2d , 3d are different // fig = plt.figure(figsize = (8,8)): 2d ; fig = plt.figure(1,figsize = (8,8))3d
+    # ax = fig.add_subplot(111, projection='3d')
+    #fig = plt.figure()
+    #ax = fig.add_subplot(111, projection='3d')
+    fig = plt.figure(1, figsize=(8,8))
+    plt.clf()
+    ax = Axes3D(fig, rect=[0, 0, .95, 1], elev=48, azim=134)
+    plt.cla()
+    
+    ax.set_xlabel("principle component 1", fontsize = 15)
+    ax.set_ylabel("principle component 2", fontsize = 15)
+    ax.set_zlabel("principle component 3", fontsize = 15)
+    ax.set_title('3 Component PCA', fontsize = 20)
+
+
+    targets = [0,1,2,3,4,5]
+    colors = ['peru', 'g', 'b','r', 'c', 'k']
+    markers=['s','o','*','>','<','d']
+    for target, color,marker in zip(targets,colors,markers):
+        #print(target)
+        internal_data= (plot_data["number of index cluster "] == target)
+        print(type(internal_data))
+        #print((plot_data.loc[ "principle component 3"]))
+        #print((plot_data.loc[plot_data[0], "principle component 3"]))
+        #print(type(plot_data.loc[plot_data, "principle component 3"]))
+        ax.scatter(plot_data.loc[internal_data,"principle component 1"]
+                     , plot_data.loc[internal_data, "principle component 2"]
+                     , plot_data.loc[internal_data, "principle component 3"]                
+                     ,marker=marker,c='',edgecolors=color , s = 20)
+    #ax.legend(targets,loc='upper right')
+    plt.xlim(xlim)
+    plt.ylim(ylim)
+    #plt.zlim(zlim)
+    plt.show()
+def plot_fuc_3d_5(plot_data,xlim=None,ylim=None,zlim=None):
+    plot_data=pd.DataFrame(plot_data,columns=["number of index cluster ","principle component 1"  ,"principle component 2","principle component 3"])
+    #print(plot_data)
+    plot_data["number of index cluster "]==float(1)
+    plot_data["number of index cluster "].astype('int')
+    #fig = plt.figure(1,figsize = (8,8))  # 2d , 3d are different // fig = plt.figure(figsize = (8,8)): 2d ; fig = plt.figure(1,figsize = (8,8))3d
+    # ax = fig.add_subplot(111, projection='3d')
+    #fig = plt.figure()
+    #ax = fig.add_subplot(111, projection='3d')
+    fig = plt.figure(1, figsize=(8,8))
+    plt.clf()
+    ax = Axes3D(fig, rect=[0, 0, .95, 1], elev=48, azim=134)
+    plt.cla()
+    
+    ax.set_xlabel("principle component 1", fontsize = 15)
+    ax.set_ylabel("principle component 2", fontsize = 15)
+    ax.set_zlabel("principle component 3", fontsize = 15)
+    ax.set_title('3 Component PCA', fontsize = 20)
+
+
+    targets = [0,1,2,3,4]
+    colors = ['peru', 'g', 'b','r', 'c',]
+    markers=['s','o','*','>','<']
+    for target, color,marker in zip(targets,colors,markers):
+        #print(target)
+        internal_data= (plot_data["number of index cluster "] == target)
+        print(type(internal_data))
+        #print((plot_data.loc[ "principle component 3"]))
+        #print((plot_data.loc[plot_data[0], "principle component 3"]))
+        #print(type(plot_data.loc[plot_data, "principle component 3"]))
+        ax.scatter(plot_data.loc[internal_data,"principle component 1"]
+                     , plot_data.loc[internal_data, "principle component 2"]
+                     , plot_data.loc[internal_data, "principle component 3"]                
+                     ,marker=marker,c='',edgecolors=color , s = 20)
+    #ax.legend(targets,loc='upper right')
+    plt.xlim(xlim)
+    plt.ylim(ylim)
+    #plt.zlim(zlim)
+    plt.show()
+def plot_fuc_3d_4(plot_data,xlim=None,ylim=None,zlim=None):
+    plot_data=pd.DataFrame(plot_data,columns=["number of index cluster ","principle component 1"  ,"principle component 2","principle component 3"])
+    #print(plot_data)
+    plot_data["number of index cluster "]==float(1)
+    plot_data["number of index cluster "].astype('int')
+    #fig = plt.figure(1,figsize = (8,8))  # 2d , 3d are different // fig = plt.figure(figsize = (8,8)): 2d ; fig = plt.figure(1,figsize = (8,8))3d
+    # ax = fig.add_subplot(111, projection='3d')
+    #fig = plt.figure()
+    #ax = fig.add_subplot(111, projection='3d')
+    fig = plt.figure(1, figsize=(8,8))
+    plt.clf()
+    ax = Axes3D(fig, rect=[0, 0, .95, 1], elev=48, azim=134)
+    plt.cla()
+    
+    ax.set_xlabel("principle component 1", fontsize = 15)
+    ax.set_ylabel("principle component 2", fontsize = 15)
+    ax.set_zlabel("principle component 3", fontsize = 15)
+    ax.set_title('3 Component PCA', fontsize = 20)
+
+
+    targets = [0,1,2,3]
+    colors = ['peru', 'g', 'b','r']
+    markers=['s','o','*','>']
+    for target, color,marker in zip(targets,colors,markers):
+        #print(target)
+        internal_data= (plot_data["number of index cluster "] == target)
+        #print(type(internal_data))
+        #print((plot_data.loc[ "principle component 3"]))
+        #print((plot_data.loc[plot_data[0], "principle component 3"]))
+        #print(type(plot_data.loc[plot_data, "principle component 3"]))
+        ax.scatter(plot_data.loc[internal_data,"principle component 1"]
+                     , plot_data.loc[internal_data, "principle component 2"]
+                     , plot_data.loc[internal_data, "principle component 3"]                
+                     ,marker=marker,c='',edgecolors=color , s = 20)
+    #ax.legend(targets,loc='upper right')
+    plt.xlim(xlim)
+    plt.ylim(ylim)
+    #plt.zlim(zlim)
+    plt.show()
